@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>AstraSync • Add Data</title>
+
+  <link rel="manifest" href="../public/manifest.json">
+  <link rel="stylesheet" href="../css/style.css">
+  <meta name="theme-color" content="#0A84FF">
+  <link rel="apple-touch-icon" href="../public/assets/icon-192.png">
+</head>
+
+<body>
+  <div class="shell" style="grid-template-columns:78px 1fr;">
+    <aside class="sidebar">
+      <div class="brand">AS</div>
+      <a class="navIcon" href="index.html">🏠</a>
+      <a class="navIcon active" href="add_data.html">➕</a>
+      <a class="navIcon" href="upload.html">📄</a>
+      <a class="navIcon" href="history.html">📈</a>
+      <a class="navIcon" href="report.html">🧾</a>
+      <a class="navIcon" href="profile.html">👤</a>
+    </aside>
+
+    <main class="main">
+      <section class="header">
+        <div>
+          <h1 class="hTitle">Add Health Data</h1>
+          <div class="hSub">Manual entry (works even without devices)</div>
+        </div>
+        <div class="hActions">
+          <a class="btn" href="index.html" style="text-decoration:none;">Back</a>
+        </div>
+      </section>
+
+      <div class="card">
+        <h3 class="cardTitle">Today’s Entry</h3>
+
+        <div class="formGrid">
+          <div class="field"><label>Date</label><input id="date" type="date"/></div>
+          <div class="field"><label>Steps</label><input id="steps" type="number"/></div>
+
+          <div class="field"><label>Sleep Hours</label><input id="sleep_hours" type="number" step="0.1"/></div>
+          <div class="field"><label>SpO₂ Avg (%)</label><input id="spo2_avg" type="number"/></div>
+
+          <div class="field"><label>Resting HR (bpm)</label><input id="resting_hr" type="number"/></div>
+          <div class="field"><label>Water Intake (ml)</label><input id="water_ml" type="number"/></div>
+
+          <div class="field"><label>BP Systolic</label><input id="bp_sys" type="number"/></div>
+          <div class="field"><label>BP Diastolic</label><input id="bp_dia" type="number"/></div>
+
+          <div class="field"><label>Screen Time (min)</label><input id="screen_time_min" type="number"/></div>
+          <div class="field"><label>Toilet Frequency</label><input id="toilet_freq" type="number"/></div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <label><input id="alcohol" type="checkbox"/> Alcohol</label>
+          <label style="margin-left:20px;"><input id="smoking" type="checkbox"/> Smoking</label>
+        </div>
+
+        <div style="margin-top:20px;">
+          <button class="btn" id="saveBtn">Save & Analyze</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/api.js"></script>
+
+  <script>
+    // Set active nav if function exists
+    if (typeof setActiveNav === "function") {
+      setActiveNav("add_data.html");
+    }
+
+    // Redirect if not logged in
+    if (!localStorage.getItem("astrasync_authed")) {
+      window.location.href = "login.html";
+    }
+
+    // Set today's date
+    if (typeof todayISO === "function") {
+      document.getElementById("date").value = todayISO();
+    }
+
+    function num(id) {
+      const v = document.getElementById(id).value;
+      return v === "" ? null : Number(v);
+    }
+
+    document.getElementById("saveBtn").addEventListener("click", async () => {
+      try {
+        const entry = {
+          user_id: "demo",
+          date: document.getElementById("date").value,
+
+          steps: num("steps"),
+          sleep_hours: num("sleep_hours"),
+          spo2_avg: num("spo2_avg"),
+          resting_hr: num("resting_hr"),
+          water_ml: num("water_ml"),
+
+          bp_sys: num("bp_sys"),
+          bp_dia: num("bp_dia"),
+
+          screen_time_min: num("screen_time_min"),
+          toilet_freq: num("toilet_freq"),
+
+          alcohol: document.getElementById("alcohol").checked ? 1 : 0,
+          smoking: document.getElementById("smoking").checked ? 1 : 0
+        };
+        
+        await apiPost("/submit_data", entry);
+        const score = await apiPost("/score", entry);
+
+        localStorage.setItem("astrasync_last_entry", JSON.stringify(entry));
+        localStorage.setItem("astrasync_last_score", JSON.stringify(score));
+
+        alert(`Saved ✅ Risk: ${score.risk_color} (${score.confidence}%)`);
+
+        window.location.href = "index.html";
+
+      } catch (err) {
+        console.error(err);
+        alert("Save failed: " + (err?.message || err));
+      }
+    });
+  </script>
+
+</body>
+</html>
